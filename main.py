@@ -5,6 +5,9 @@ import scipy.misc
 import os
 
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+
 IMAGE_W = 800 
 IMAGE_H = 600 
 CONTENT_IMG =  './images/Taipei101.jpg'
@@ -108,7 +111,7 @@ def write_image(path, image):
 def main():
   net = build_vgg19(VGG_MODEL)
   sess = tf.Session()
-  sess.run(tf.initialize_all_variables())
+  sess.run(tf.global_variables_initializer())
   noise_img = np.random.uniform(-20, 20, (1, IMAGE_H, IMAGE_W, 3)).astype('float32')
   content_img = read_image(CONTENT_IMG)
   style_img = read_image(STYLE_IMG)
@@ -118,14 +121,13 @@ def main():
     , CONTENT_LAYERS))
 
   sess.run([net['input'].assign(style_img)])
-  cost_style = sum(map(lambda l: l[1]*build_style_loss(sess.run(net[l[0]]) ,  net[l[0]])
-    , STYLE_LAYERS))
+  cost_style = sum([l[1]*build_style_loss(sess.run(net[l[0]]) ,  net[l[0]]) for l in STYLE_LAYERS])
 
   cost_total = cost_content + STYLE_STRENGTH * cost_style
   optimizer = tf.train.AdamOptimizer(2.0)
 
   train = optimizer.minimize(cost_total)
-  sess.run(tf.initialize_all_variables())
+  sess.run(tf.global_variables_initializer())
   sess.run(net['input'].assign( INI_NOISE_RATIO* noise_img + (1.-INI_NOISE_RATIO) * content_img))
 
   if not os.path.exists(OUTOUT_DIR):
@@ -135,7 +137,7 @@ def main():
     sess.run(train)
     if i%100 ==0:
       result_img = sess.run(net['input'])
-      print sess.run(cost_total)
+      print(sess.run(cost_total))
       write_image(os.path.join(OUTOUT_DIR,'%s.png'%(str(i).zfill(4))),result_img)
   
   write_image(os.path.join(OUTOUT_DIR,OUTPUT_IMG),result_img)
